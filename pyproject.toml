@@ -1,0 +1,14 @@
+[project]
+name = "studyflow"
+version = "0.1.0"
+description = "Personal study task assistant API"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.142.2",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
