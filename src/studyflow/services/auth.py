@@ -1,9 +1,10 @@
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from studyflow.models.user import User
 from studyflow.schemas.auth import RegisterRequest
-from studyflow.security import hash_password
+from studyflow.security import hash_password, verify_password
 
 
 def register_user(db: Session, data: RegisterRequest) -> User:
@@ -27,5 +28,23 @@ def register_user(db: Session, data: RegisterRequest) -> User:
     except Exception:
         db.rollback()
         raise
+
+    return user
+
+
+def authenticate_user(
+    db: Session,
+    email: str,
+    password: str,
+) -> User | None:
+    user = db.scalar(
+        select(User).where(User.email == email)
+    )
+
+    if user is None or user.password_hash is None:
+        return None
+
+    if not verify_password(password, user.password_hash):
+        return None
 
     return user

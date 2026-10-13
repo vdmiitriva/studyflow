@@ -1,12 +1,18 @@
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from studyflow.database import get_db
 from studyflow.models.user import User
-from studyflow.schemas.auth import RegisterRequest, UserResponse
-from studyflow.services.auth import register_user
-
+from studyflow.schemas.auth import (
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserResponse,
+)
+from studyflow.security import create_access_token
+from studyflow.services.auth import authenticate_user, register_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -15,6 +21,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "description": "Email is already registered",
+        },
+    },
 )
 def register(
     data: RegisterRequest,
@@ -33,7 +44,35 @@ def register(
             detail="Email is already registered",
         ) from exc
 
-    return UserResponse(
-        id=str(user.id),
-        email=user.email,
+    return UserResponse(id=str(user.id), email=user.email)
+
+
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Invalid email or password",
+        },
+    },
+)
+def login(
+    data: LoginRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    user = authenticate_user(
+        db=db,
+        email=str(data.email),
+        password=data.password,
     )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = create_access_token(user.id)
+
+    return TokenResponse(access_token=token)
