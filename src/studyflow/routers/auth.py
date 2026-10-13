@@ -13,6 +13,7 @@ from studyflow.schemas.auth import (
 )
 from studyflow.security import create_access_token
 from studyflow.services.auth import authenticate_user, register_user
+from studyflow.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -76,3 +77,12 @@ def login(
     token = create_access_token(user.id)
 
     return TokenResponse(access_token=token)
+
+@router.get("/me", response_model=UserResponse)
+def read_current_user(
+    user: User = Depends(get_current_user),
+) -> UserResponse:
+    return UserResponse(
+        id=str(user.id),
+        email=user.email,
+    )
