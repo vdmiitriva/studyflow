@@ -68,4 +68,7 @@ class Task(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="tasks")
-    subject: Mapped["Subject"] = relationship(back_populates="tasks")
+    subject: Mapped["Subject"] = relationship(
+        back_populates="tasks",
+        foreign_keys=[subject_id],
+    )

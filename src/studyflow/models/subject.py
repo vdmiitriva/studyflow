@@ -57,4 +57,5 @@ class Subject(Base):
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="subject",
         passive_deletes=True,
+        foreign_keys="Task.subject_id",
     )
