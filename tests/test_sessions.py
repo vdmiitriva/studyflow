@@ -96,3 +96,57 @@ def test_revoke_session(db_session: Session) -> None:
 
     assert user_session.revoked_at is not None
     assert get_valid_session(db_session, token) is None
+
+
+def test_valid_session_expiration_is_extended(db_session: Session) -> None:
+    user = User(email=f"extend-session-{uuid4()}@example.com")
+    db_session.add(user)
+    db_session.flush()
+
+    user_session, token = create_session(db_session, user.id)
+    original_expiration = user_session.expires_at
+
+    found_session = get_valid_session(db_session, token)
+
+    assert found_session is not None
+    assert found_session.expires_at > original_expiration
+    assert found_session.expires_at <= (
+        datetime.now(UTC) + timedelta(days=4)
+    )
+
+
+
+def test_session_expiration_does_not_exceed_30_days(
+    db_session: Session,
+) -> None:
+    user = User(email=f"capped-session-{uuid4()}@example.com")
+    db_session.add(user)
+    db_session.flush()
+
+    user_session, token = create_session(db_session, user.id)
+
+    user_session.created_at -= timedelta(days=27)
+    user_session.expires_at = datetime.now(UTC) + timedelta(days=3)
+    db_session.commit()
+
+    found_session = get_valid_session(db_session, token)
+
+    assert found_session is not None
+    assert found_session.expires_at == (
+        user_session.created_at + timedelta(days=30)
+    )
+
+
+def test_revoke_session_twice_is_safe(db_session: Session) -> None:
+    user = User(email=f"revoke-twice-{uuid4()}@example.com")
+    db_session.add(user)
+    db_session.flush()
+
+    user_session, _ = create_session(db_session, user.id)
+
+    revoke_session(db_session, user_session)
+    original_revoked_at = user_session.revoked_at
+
+    revoke_session(db_session, user_session)
+
+    assert user_session.revoked_at == original_revoked_at

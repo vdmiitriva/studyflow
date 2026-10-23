@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from studyflow.routers.auth import router as auth_router
 
 app = FastAPI()

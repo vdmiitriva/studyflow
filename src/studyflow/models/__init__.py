@@ -6,10 +6,10 @@ from studyflow.models.user import User
 from studyflow.models.user_session import UserSession
 
 __all__ = [
-    "Base",
-    "User",
     "AuthIdentity",
+    "Base",
     "Subject",
     "Task",
+    "User",
     "UserSession",
 ]

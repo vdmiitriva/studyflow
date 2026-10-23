@@ -1,39 +1,29 @@
-
-from uuid import UUID
-
-import jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
+from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from studyflow.database import get_db
 from studyflow.models.user import User
-from studyflow.security import decode_access_token
-
-
-bearer_scheme = HTTPBearer()
+from studyflow.services.sessions import get_valid_session
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    studyflow_session: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        detail="Not authenticated",
     )
 
-    token = credentials.credentials
+    if studyflow_session is None:
+        raise credentials_exception
 
-    try:
-        payload = decode_access_token(token)
-        user_id = UUID(payload["sub"])
-    except (jwt.InvalidTokenError, ValueError, KeyError):
-        raise credentials_exception from None
+    user_session = get_valid_session(db, studyflow_session)
 
-    user = db.scalar(select(User).where(User.id == user_id))
+    if user_session is None:
+        raise credentials_exception
+
+    user = db.get(User, user_session.user_id)
 
     if user is None:
         raise credentials_exception
