@@ -22,5 +22,21 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.16.0",
     "pytest>=9.1.1",
+    "ruff>=0.17.2",
 ]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/studyflow/routers/*.py" = ["B008"]
+"src/studyflow/dependencies/*.py" = ["B008"]
+"src/studyflow/models/*.py" = ["F821"]
+"migrations/versions/*.py" = ["UP", "E501"]
+"tests/test_constraints.py" = ["RUF003"]

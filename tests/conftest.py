@@ -2,7 +2,7 @@ from collections.abc import Iterator
 
 import pytest
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine, URL
+from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import Session
 
 from studyflow.settings import settings

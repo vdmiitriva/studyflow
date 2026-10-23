@@ -1,4 +1,3 @@
-
 from uuid import uuid4
 
 from sqlalchemy import select, text
@@ -24,17 +23,14 @@ def test_database_changes_can_be_rolled_back(
 
     user_id = user.id
 
-    # До отката запись существует внутри текущей транзакции.
     result_before = db_session.execute(
         select(User.id).where(User.id == user_id)
     ).scalar_one_or_none()
 
     assert result_before == user_id
 
-    # Откатываем транзакцию с изменением.
     db_session.rollback()
 
-    # После отката запись должна отсутствовать.
     result_after = db_session.execute(
         select(User.id).where(User.id == user_id)
     ).scalar_one_or_none()

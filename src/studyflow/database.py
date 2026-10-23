@@ -1,8 +1,9 @@
+from collections.abc import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from studyflow.settings import settings
-
 
 DATABASE_URL = (
     f"postgresql+psycopg://{settings.postgres_user}:"
@@ -22,12 +23,10 @@ SessionLocal = sessionmaker(
 )
 
 
-from collections.abc import Generator
-
-from sqlalchemy.orm import Session
 
 
-def get_db() -> Generator[Session, None, None]:
+
+def get_db() -> Generator[Session]:
     db = SessionLocal()
     try:
         yield db
