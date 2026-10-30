@@ -88,6 +88,7 @@ def login(
 
     return UserResponse(id=str(user.id), email=user.email)
 
+
 @router.get("/me", response_model=UserResponse)
 def read_current_user(
     user: User = Depends(get_current_user),
@@ -96,6 +97,7 @@ def read_current_user(
         id=str(user.id),
         email=user.email,
     )
+
 
 @router.get("/csrf")
 def get_csrf_token(

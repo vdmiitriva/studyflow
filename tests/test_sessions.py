@@ -28,6 +28,7 @@ def test_create_session(db_session: Session) -> None:
     assert user_session.revoked_at is None
     assert user_session.expires_at > user_session.created_at
 
+
 def test_get_valid_session(db_session: Session) -> None:
     user = User(
         email=f"valid-session-{uuid4()}@example.com",
@@ -44,6 +45,7 @@ def test_get_valid_session(db_session: Session) -> None:
     assert found_session.user_id == user.id
     assert found_session.revoked_at is None
 
+
 def test_expired_session_is_rejected(db_session: Session) -> None:
     user = User(
         email=f"expired-session-{uuid4()}@example.com",
@@ -53,14 +55,13 @@ def test_expired_session_is_rejected(db_session: Session) -> None:
 
     user_session, token = create_session(db_session, user.id)
 
-    user_session.expires_at = datetime.now(UTC) - timedelta(
-        minutes=1
-    )
+    user_session.expires_at = datetime.now(UTC) - timedelta(minutes=1)
     db_session.commit()
 
     found_session = get_valid_session(db_session, token)
 
     assert found_session is None
+
 
 def test_revoked_session_is_rejected(db_session: Session) -> None:
     user = User(
@@ -78,12 +79,14 @@ def test_revoked_session_is_rejected(db_session: Session) -> None:
 
     assert found_session is None
 
+
 def test_unknown_session_token_is_rejected(db_session: Session) -> None:
     unknown_token = "this-token-does-not-exist"
 
     found_session = get_valid_session(db_session, unknown_token)
 
     assert found_session is None
+
 
 def test_revoke_session(db_session: Session) -> None:
     user = User(email=f"revoke-session-{uuid4()}@example.com")
@@ -110,10 +113,7 @@ def test_valid_session_expiration_is_extended(db_session: Session) -> None:
 
     assert found_session is not None
     assert found_session.expires_at > original_expiration
-    assert found_session.expires_at <= (
-        datetime.now(UTC) + timedelta(days=4)
-    )
-
+    assert found_session.expires_at <= (datetime.now(UTC) + timedelta(days=4))
 
 
 def test_session_expiration_does_not_exceed_30_days(
@@ -132,9 +132,7 @@ def test_session_expiration_does_not_exceed_30_days(
     found_session = get_valid_session(db_session, token)
 
     assert found_session is not None
-    assert found_session.expires_at == (
-        user_session.created_at + timedelta(days=30)
-    )
+    assert found_session.expires_at == (user_session.created_at + timedelta(days=30))
 
 
 def test_revoke_session_twice_is_safe(db_session: Session) -> None:

@@ -7,9 +7,7 @@ from studyflow.models import User
 
 
 def test_connection_uses_test_database(db_session: Session) -> None:
-    database_name = db_session.execute(
-        text("SELECT current_database()")
-    ).scalar_one()
+    database_name = db_session.execute(text("SELECT current_database()")).scalar_one()
 
     assert database_name == "studyflow_test"
 

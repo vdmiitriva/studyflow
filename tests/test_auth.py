@@ -1,30 +1,11 @@
-
-from collections.abc import Iterator
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from studyflow.database import get_db
-from studyflow.main import app
 from studyflow.models.user import User
 from studyflow.security import create_csrf_token, verify_csrf_token
 from studyflow.services.sessions import create_session
-
-
-@pytest.fixture
-def client(db_session: Session) -> Iterator[TestClient]:
-    def override_get_db() -> Iterator[Session]:
-        yield db_session
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    try:
-        with TestClient(app) as test_client:
-            yield test_client
-    finally:
-        app.dependency_overrides.pop(get_db, None)
 
 
 def test_get_csrf_token_requires_authentication(
@@ -128,7 +109,6 @@ def test_logout_rejects_invalid_origin(
 
     db_session.refresh(user_session)
     assert user_session.revoked_at is None
-
 
 
 def test_logout_succeeds_with_valid_csrf_token(

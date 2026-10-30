@@ -19,16 +19,12 @@ def verify_password(password: str, hashed_password: str) -> bool:
     return password_hash.verify(password, hashed_password)
 
 
-
-
 ALGORITHM = "HS256"
 
 
 def create_access_token(user_id: UUID) -> str:
     now = datetime.now(UTC)
-    expires_at = now + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    expires_at = now + timedelta(minutes=settings.access_token_expire_minutes)
 
     payload = {
         "sub": str(user_id),
@@ -51,12 +47,14 @@ def decode_access_token(token: str) -> dict:
         options={"require": ["sub", "exp"]},
     )
 
+
 def create_csrf_token(session_token: str) -> str:
     return hmac.new(
         settings.csrf_secret.encode("utf-8"),
         session_token.encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
+
 
 def verify_csrf_token(session_token: str, csrf_token: str) -> bool:
     expected_token = create_csrf_token(session_token)

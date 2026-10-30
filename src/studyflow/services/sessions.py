@@ -12,8 +12,10 @@ from studyflow.models.user_session import UserSession
 def generate_session_token() -> str:
     return secrets.token_urlsafe(32)
 
+
 def hash_session_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
 
 def create_session(db: Session, user_id: UUID) -> tuple[UserSession, str]:
     now = datetime.now(UTC)
@@ -23,9 +25,9 @@ def create_session(db: Session, user_id: UUID) -> tuple[UserSession, str]:
     user_session = UserSession(
         user_id=user_id,
         token_hash=token_hash,
-        created_at = now,
-        last_activity_at = now,
-        expires_at = now + timedelta(days=4)
+        created_at=now,
+        last_activity_at=now,
+        expires_at=now + timedelta(days=4),
     )
 
     db.add(user_session)
@@ -33,6 +35,7 @@ def create_session(db: Session, user_id: UUID) -> tuple[UserSession, str]:
     db.refresh(user_session)
 
     return user_session, token
+
 
 def get_valid_session(db: Session, token: str) -> UserSession | None:
     token_hash = hash_session_token(token)
@@ -49,9 +52,8 @@ def get_valid_session(db: Session, token: str) -> UserSession | None:
 
     now = datetime.now(UTC)
 
-    if (
-        now >= user_session.expires_at
-        or now >= user_session.created_at + timedelta(days=30)
+    if now >= user_session.expires_at or now >= user_session.created_at + timedelta(
+        days=30
     ):
         return None
 
@@ -65,10 +67,10 @@ def get_valid_session(db: Session, token: str) -> UserSession | None:
 
     return user_session
 
+
 def revoke_session(db: Session, user_session: UserSession) -> None:
     if user_session.revoked_at is not None:
         return
 
     user_session.revoked_at = datetime.now(UTC)
     db.commit()
-

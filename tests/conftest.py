@@ -1,10 +1,13 @@
 from collections.abc import Iterator
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import Session
 
+from studyflow.database import get_db
+from studyflow.main import app
 from studyflow.settings import settings
 
 
@@ -31,9 +34,7 @@ def test_engine() -> Iterator[Engine]:
             ).scalar_one()
 
             if database_name != "studyflow_test":
-                raise RuntimeError(
-                    f"Unexpected test database: {database_name}"
-                )
+                raise RuntimeError(f"Unexpected test database: {database_name}")
 
         yield engine
     finally:
@@ -54,3 +55,17 @@ def db_session(test_engine: Engine) -> Iterator[Session]:
         finally:
             session.close()
             transaction.rollback()
+
+
+@pytest.fixture
+def client(db_session: Session) -> Iterator[TestClient]:
+    def override_get_db() -> Iterator[Session]:
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.pop(get_db, None)

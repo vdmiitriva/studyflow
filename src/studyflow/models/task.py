@@ -39,10 +39,7 @@ class Task(Base):
         nullable=False,
         index=True,
     )
-    subject_id: Mapped[UUID] = mapped_column(
-        nullable=False,
-        index=True,
-    )
+    subject_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
     title: Mapped[str] = mapped_column(
         String(200),
         nullable=False,

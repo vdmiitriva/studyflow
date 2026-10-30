@@ -7,9 +7,7 @@ from studyflow.security import hash_password, verify_password
 
 
 def register_user(db: Session, data: RegisterRequest) -> User:
-    existing_user = db.scalar(
-        select(User).where(User.email == str(data.email))
-    )
+    existing_user = db.scalar(select(User).where(User.email == str(data.email)))
 
     if existing_user is not None:
         raise ValueError("Email is already registered")
@@ -36,9 +34,7 @@ def authenticate_user(
     email: str,
     password: str,
 ) -> User | None:
-    user = db.scalar(
-        select(User).where(User.email == email)
-    )
+    user = db.scalar(select(User).where(User.email == email))
 
     if user is None or user.password_hash is None:
         return None
