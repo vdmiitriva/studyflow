@@ -6,9 +6,7 @@ class Settings(BaseSettings):
     postgres_user: str
     postgres_password: str
 
-    secret_key: str
     cookie_secure: bool = True
-    access_token_expire_minutes: int = 30
 
     model_config = SettingsConfigDict(
         env_file=".env",
