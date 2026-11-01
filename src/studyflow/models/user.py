@@ -23,6 +23,12 @@ class User(Base):
         String(255),
         nullable=True,
     )
+    timezone: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="UTC",
+        server_default="UTC",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

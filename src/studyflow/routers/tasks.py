@@ -1,6 +1,7 @@
+from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from studyflow.database import get_db
@@ -56,12 +57,28 @@ def create_task(
 
 @router.get("/", response_model=list[TaskResponse])
 def read_tasks(
+    status_filter: Literal["todo", "in_progress", "completed"] | None = Query(
+        default=None,
+        alias="status",
+    ),
+    subject_id: UUID | None = None,
+    date_filter: Literal["today", "overdue", "upcoming"] | None = Query(
+        default=None,
+    ),
+    sort_by: Literal["created_at", "deadline"] = "created_at",
+    order: Literal["asc", "desc"] = "desc",
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[TaskResponse]:
     return get_tasks_service(
         db=db,
         user_id=user.id,
+        status=status_filter,
+        subject_id=subject_id,
+        date_filter=date_filter,
+        timezone=user.timezone,
+        sort_by=sort_by,
+        order=order,
     )
 
 
@@ -107,7 +124,7 @@ def edit_task(
         ) from exc
     except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
 

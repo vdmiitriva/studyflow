@@ -1,4 +1,7 @@
+from datetime import datetime, time, timedelta
+from typing import Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -60,13 +63,70 @@ def create_task(db: Session, user_id: UUID, data: TaskCreate) -> Task:
     return task
 
 
-def get_tasks(db: Session, user_id: UUID) -> list[Task]:
-    return (
-        db.query(Task)
-        .filter(Task.user_id == user_id)
-        .order_by(Task.created_at.desc())
-        .all()
-    )
+def get_tasks(
+    db: Session,
+    user_id: UUID,
+    status: Literal["todo", "in_progress", "completed"] | None = None,
+    subject_id: UUID | None = None,
+    date_filter: Literal["today", "overdue", "upcoming"] | None = None,
+    timezone: str = "UTC",
+    sort_by: Literal["created_at", "deadline"] = "created_at",
+    order: Literal["asc", "desc"] = "desc",
+) -> list[Task]:
+    query = db.query(Task).filter(Task.user_id == user_id)
+
+    if status is not None:
+        query = query.filter(Task.status == status)
+
+    if subject_id is not None:
+        query = query.filter(Task.subject_id == subject_id)
+
+    if date_filter == "today":
+        user_timezone = ZoneInfo(timezone)
+        today = datetime.now(user_timezone).date()
+
+        start = datetime.combine(today, time.min, tzinfo=user_timezone)
+        end = datetime.combine(
+            today + timedelta(days=1),
+            time.min,
+            tzinfo=user_timezone,
+        )
+
+        query = query.filter(
+            Task.deadline >= start,
+            Task.deadline < end,
+        )
+
+    elif date_filter == "overdue":
+        now = datetime.now(ZoneInfo(timezone))
+
+        query = query.filter(
+            Task.deadline < now,
+            Task.status != "completed",
+        )
+
+    elif date_filter == "upcoming":
+        now = datetime.now(ZoneInfo(timezone))
+
+        query = query.filter(
+            Task.deadline > now,
+            Task.status != "completed",
+        )
+
+    sort_column = {
+        "created_at": Task.created_at,
+        "deadline": Task.deadline,
+    }[sort_by]
+
+    if order == "asc":
+        ordering = sort_column.asc()
+    else:
+        ordering = sort_column.desc()
+
+    if sort_by == "deadline":
+        ordering = ordering.nullslast()
+
+    return query.order_by(ordering).all()
 
 
 def get_task(
