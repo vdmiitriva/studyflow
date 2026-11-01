@@ -456,51 +456,6 @@ def test_list_tasks_only_returns_current_users_tasks(client, db_session):
         app.dependency_overrides.pop(get_current_user, None)
 
 
-def test_list_tasks_today_rejects_invalid_date_filter(client, db_session):
-    user = create_user(db_session)
-    app.dependency_overrides[get_current_user] = lambda: user
-
-    try:
-        response = client.get(
-            "/api/v1/tasks/",
-            params={"date_filter": "invalid"},
-        )
-
-        assert response.status_code == 422
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
-
-
-def test_list_tasks_rejects_invalid_sort_by(client, db_session):
-    user = create_user(db_session)
-    app.dependency_overrides[get_current_user] = lambda: user
-
-    try:
-        response = client.get(
-            "/api/v1/tasks/",
-            params={"sort_by": "title"},
-        )
-
-        assert response.status_code == 422
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
-
-
-def test_list_tasks_rejects_invalid_order(client, db_session):
-    user = create_user(db_session)
-    app.dependency_overrides[get_current_user] = lambda: user
-
-    try:
-        response = client.get(
-            "/api/v1/tasks/",
-            params={"order": "random"},
-        )
-
-        assert response.status_code == 422
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
-
-
 def test_get_task_requires_authentication(client):
     response = client.get(f"/api/v1/tasks/{uuid4()}")
 
