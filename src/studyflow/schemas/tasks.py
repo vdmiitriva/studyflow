@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 TaskStatus = Literal["todo", "in_progress", "completed"]
 
@@ -11,7 +11,7 @@ class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
     subject_id: uuid.UUID | None = None
-    deadline: datetime | None = None
+    deadline: AwareDatetime | None = None
     status: TaskStatus = "todo"
 
 
@@ -36,5 +36,5 @@ class TaskUpdate(BaseModel):
     )
     description: str | None = None
     subject_id: uuid.UUID | None = None
-    deadline: datetime | None = None
+    deadline: AwareDatetime | None = None
     status: TaskStatus | None = None
