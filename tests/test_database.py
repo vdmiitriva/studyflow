@@ -1,8 +1,10 @@
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from studyflow.database import get_db
 from studyflow.models import User
 
 
@@ -34,3 +36,17 @@ def test_database_changes_can_be_rolled_back(
     ).scalar_one_or_none()
 
     assert result_after is None
+
+
+def test_get_db_closes_session() -> None:
+    mock_session = MagicMock()
+
+    with patch(
+        "studyflow.database.SessionLocal",
+        return_value=mock_session,
+    ):
+        db_generator = get_db()
+        next(db_generator)
+        db_generator.close()
+
+    mock_session.close.assert_called_once()

@@ -1,3 +1,4 @@
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -96,3 +97,19 @@ def test_authenticate_user_without_password_hash(
     )
 
     assert authenticated_user is None
+
+
+def test_register_user_rolls_back_on_commit_error() -> None:
+    db = MagicMock(spec=Session)
+    db.scalar.return_value = None
+    db.commit.side_effect = RuntimeError("Database error")
+
+    data = RegisterRequest(
+        email="rollback@example.com",
+        password="SecurePassword123!",
+    )
+
+    with pytest.raises(RuntimeError, match="Database error"):
+        register_user(db, data)
+
+    db.rollback.assert_called_once()

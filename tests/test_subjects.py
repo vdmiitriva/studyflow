@@ -1,10 +1,20 @@
+from unittest.mock import MagicMock
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from studyflow.models import Subject, Task, User
+from studyflow.schemas.subjects import SubjectCreate, SubjectUpdate
 from studyflow.services.sessions import create_session
+from studyflow.services.subjects import (
+    create_subject as create_subject_service,
+)
+from studyflow.services.subjects import (
+    delete_subject,
+    update_subject,
+)
 
 
 def authenticate(
@@ -432,3 +442,78 @@ def test_delete_subject_without_authentication_returns_401(
     response = client.delete(f"/api/v1/subjects/{subject.id}")
 
     assert response.status_code == 401
+
+
+# SERVICE ERROR HANDLING
+
+
+def test_create_subject_rolls_back_on_commit_error(
+    db_session: Session,
+) -> None:
+    db = MagicMock(spec=Session)
+    db.commit.side_effect = RuntimeError("Database error")
+
+    user = create_user(db_session)
+    data = SubjectCreate(name="Математика")
+
+    with pytest.raises(RuntimeError, match="Database error"):
+        create_subject_service(db, user.id, data)
+
+    db.rollback.assert_called_once()
+
+
+def test_update_subject_rejects_null_name(
+    db_session: Session,
+) -> None:
+    user = create_user(db_session)
+    subject = create_subject(db_session, user)
+
+    with pytest.raises(ValueError, match="Name cannot be null"):
+        update_subject(
+            db_session,
+            user.id,
+            subject.id,
+            SubjectUpdate(name=None),
+        )
+
+
+def test_update_subject_rolls_back_on_commit_error(
+    db_session: Session,
+) -> None:
+    user = create_user(db_session)
+    subject = create_subject(db_session, user)
+
+    db = MagicMock(spec=Session)
+    db.scalar.return_value = subject
+    db.commit.side_effect = RuntimeError("Database error")
+
+    with pytest.raises(RuntimeError, match="Database error"):
+        update_subject(
+            db,
+            user.id,
+            subject.id,
+            SubjectUpdate(name="Алгоритмы"),
+        )
+
+    db.rollback.assert_called_once()
+
+
+def test_delete_subject_rolls_back_on_commit_error(
+    db_session: Session,
+) -> None:
+    user = create_user(db_session)
+    subject = create_subject(db_session, user)
+
+    db = MagicMock(spec=Session)
+    db.scalar.return_value = subject
+    db.commit.side_effect = RuntimeError("Database error")
+
+    with pytest.raises(RuntimeError, match="Database error"):
+        delete_subject(
+            db,
+            user.id,
+            subject.id,
+        )
+
+    db.delete.assert_called_once_with(subject)
+    db.rollback.assert_called_once()
