@@ -2,6 +2,8 @@ from datetime import UTC, datetime, time, timedelta
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+from fastapi.testclient import TestClient
+
 from studyflow.dependencies.auth import get_current_user
 from studyflow.main import app
 from studyflow.models import Subject, Task, User
@@ -1512,5 +1514,148 @@ def test_list_tasks_rejects_invalid_order(client, db_session):
         )
 
         assert response.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_delete_nonexistent_task_returns_404(client, db_session):
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        response = client.delete(
+            f"/api/v1/tasks/{uuid4()}",
+        )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Task not found"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_get_task_returns_task(client, db_session):
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    task = Task(
+        user_id=user.id,
+        title="Test task",
+        status="todo",
+    )
+    db_session.add(task)
+    db_session.commit()
+    task_id = task.id
+
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        response = client.get(f"/api/v1/tasks/{task_id}")
+
+        assert response.status_code == 200
+        assert response.json()["id"] == str(task_id)
+        assert response.json()["title"] == "Test task"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_create_task_rolls_back_on_commit_error(client, db_session, monkeypatch):
+    from unittest.mock import Mock
+
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    rollback = Mock()
+    test_client = TestClient(app, raise_server_exceptions=False)
+
+    def fail_commit():
+        raise RuntimeError("Database commit failed")
+
+    monkeypatch.setattr(db_session, "commit", fail_commit)
+    monkeypatch.setattr(db_session, "rollback", rollback)
+
+    try:
+        response = test_client.post(
+            "/api/v1/tasks/",
+            json={
+                "title": "Test task",
+                "description": "Test description",
+                "subject_id": None,
+                "deadline": None,
+                "status": "todo",
+            },
+        )
+
+        assert response.status_code == 500
+        rollback.assert_called_once()
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_update_task_rolls_back_on_commit_error(client, db_session, monkeypatch):
+    from unittest.mock import Mock
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    task = Task(
+        user_id=user.id,
+        title="Original title",
+        status="todo",
+    )
+    db_session.add(task)
+    db_session.commit()
+    task_id = task.id
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    rollback = Mock()
+    test_client = TestClient(app, raise_server_exceptions=False)
+
+    def fail_commit():
+        raise RuntimeError("Database commit failed")
+
+    monkeypatch.setattr(db_session, "commit", fail_commit)
+    monkeypatch.setattr(db_session, "rollback", rollback)
+
+    try:
+        response = test_client.patch(
+            f"/api/v1/tasks/{task_id}",
+            json={"title": "Updated title"},
+        )
+
+        assert response.status_code == 500
+        rollback.assert_called_once()
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_delete_task_rolls_back_on_commit_error(client, db_session, monkeypatch):
+    from unittest.mock import Mock
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    task = Task(
+        user_id=user.id,
+        title="Task to delete",
+        status="todo",
+    )
+    db_session.add(task)
+    db_session.commit()
+    task_id = task.id
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    rollback = Mock()
+    test_client = TestClient(app, raise_server_exceptions=False)
+
+    def fail_commit():
+        raise RuntimeError("Database commit failed")
+
+    monkeypatch.setattr(db_session, "commit", fail_commit)
+    monkeypatch.setattr(db_session, "rollback", rollback)
+
+    try:
+        response = test_client.delete(f"/api/v1/tasks/{task_id}")
+
+        assert response.status_code == 500
+        rollback.assert_called_once()
     finally:
         app.dependency_overrides.pop(get_current_user, None)
