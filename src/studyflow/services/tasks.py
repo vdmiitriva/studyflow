@@ -173,14 +173,6 @@ def update_task(
     if "status" in updates and updates["status"] is None:
         raise ValueError("Status cannot be null")
 
-    if updates.get("status") not in (
-        None,
-        "todo",
-        "in_progress",
-        "completed",
-    ):
-        raise ValueError("Invalid task status")
-
     if "subject_id" in updates:
         validate_subject(
             db=db,

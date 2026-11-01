@@ -1614,3 +1614,18 @@ def test_delete_task_rolls_back_on_commit_error(client, db_session, monkeypatch)
         rollback.assert_called_once()
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_create_task_with_invalid_status_returns_422(client, db_session):
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        response = client.post(
+            "/api/v1/tasks/",
+            json={"title": "Prepare project", "status": "banana"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 422
