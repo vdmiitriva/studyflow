@@ -1262,3 +1262,255 @@ def test_list_tasks_today_excludes_deadline_at_start_of_next_day(
         assert str(task.id) not in {item["id"] for item in response.json()}
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_sorts_by_created_at_desc(client, db_session):
+    """По умолчанию новые задачи должны идти первыми."""
+    from datetime import UTC, datetime, timedelta
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        older = Task(
+            user_id=user.id,
+            title="Older task",
+            created_at=datetime.now(UTC) - timedelta(days=2),
+        )
+        newer = Task(
+            user_id=user.id,
+            title="Newer task",
+            created_at=datetime.now(UTC) - timedelta(days=1),
+        )
+        db_session.add_all([older, newer])
+        db_session.commit()
+
+        response = client.get("/api/v1/tasks")
+
+        assert response.status_code == 200
+        tasks = response.json()
+        assert [task["title"] for task in tasks] == [
+            "Newer task",
+            "Older task",
+        ]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_sorts_by_created_at_asc(client, db_session):
+    """При asc сначала идут старые задачи."""
+    from datetime import UTC, datetime, timedelta
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        older = Task(
+            user_id=user.id,
+            title="Older task",
+            created_at=datetime.now(UTC) - timedelta(days=2),
+        )
+        newer = Task(
+            user_id=user.id,
+            title="Newer task",
+            created_at=datetime.now(UTC) - timedelta(days=1),
+        )
+        db_session.add_all([older, newer])
+        db_session.commit()
+
+        response = client.get(
+            "/api/v1/tasks",
+            params={"sort_by": "created_at", "order": "asc"},
+        )
+
+        assert response.status_code == 200
+        assert [task["title"] for task in response.json()] == [
+            "Older task",
+            "Newer task",
+        ]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_sorts_by_deadline_asc(client, db_session):
+    """Сначала должны идти задачи с ближайшим дедлайном."""
+    from datetime import UTC, datetime, timedelta
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        later = Task(
+            user_id=user.id,
+            title="Later deadline",
+            deadline=datetime.now(UTC) + timedelta(days=3),
+        )
+        sooner = Task(
+            user_id=user.id,
+            title="Sooner deadline",
+            deadline=datetime.now(UTC) + timedelta(days=1),
+        )
+        db_session.add_all([later, sooner])
+        db_session.commit()
+
+        response = client.get(
+            "/api/v1/tasks",
+            params={"sort_by": "deadline", "order": "asc"},
+        )
+
+        assert response.status_code == 200
+        assert [task["title"] for task in response.json()] == [
+            "Sooner deadline",
+            "Later deadline",
+        ]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_sorts_by_deadline_desc(client, db_session):
+    """При desc сначала должен идти самый поздний дедлайн."""
+    from datetime import UTC, datetime, timedelta
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        earlier = Task(
+            user_id=user.id,
+            title="Earlier deadline",
+            deadline=datetime.now(UTC) + timedelta(days=1),
+        )
+        later = Task(
+            user_id=user.id,
+            title="Later deadline",
+            deadline=datetime.now(UTC) + timedelta(days=3),
+        )
+        db_session.add_all([earlier, later])
+        db_session.commit()
+
+        response = client.get(
+            "/api/v1/tasks",
+            params={"sort_by": "deadline", "order": "desc"},
+        )
+
+        assert response.status_code == 200
+        assert [task["title"] for task in response.json()] == [
+            "Later deadline",
+            "Earlier deadline",
+        ]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_deadline_sort_places_missing_deadlines_last(client, db_session):
+    """Задачи без дедлайна должны оставаться в конце списка."""
+    from datetime import UTC, datetime, timedelta
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        no_deadline = Task(
+            user_id=user.id,
+            title="No deadline",
+            deadline=None,
+        )
+        with_deadline = Task(
+            user_id=user.id,
+            title="Has deadline",
+            deadline=datetime.now(UTC) + timedelta(days=1),
+        )
+        db_session.add_all([no_deadline, with_deadline])
+        db_session.commit()
+
+        for order in ("asc", "desc"):
+            response = client.get(
+                "/api/v1/tasks",
+                params={"sort_by": "deadline", "order": order},
+            )
+
+            assert response.status_code == 200
+            titles = [task["title"] for task in response.json()]
+            assert titles[-1] == "No deadline"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_combines_overdue_filter_with_deadline_sort(client, db_session):
+    """Сортировка должна применяться после фильтрации просроченных задач."""
+    from datetime import UTC, datetime, timedelta
+
+    from studyflow.models.task import Task
+
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        older_deadline = Task(
+            user_id=user.id,
+            title="Older deadline",
+            deadline=datetime.now(UTC) - timedelta(days=3),
+        )
+        newer_deadline = Task(
+            user_id=user.id,
+            title="Newer deadline",
+            deadline=datetime.now(UTC) - timedelta(days=1),
+        )
+        future = Task(
+            user_id=user.id,
+            title="Future deadline",
+            deadline=datetime.now(UTC) + timedelta(days=2),
+        )
+        db_session.add_all([older_deadline, newer_deadline, future])
+        db_session.commit()
+
+        response = client.get(
+            "/api/v1/tasks",
+            params={
+                "date_filter": "overdue",
+                "sort_by": "deadline",
+                "order": "asc",
+            },
+        )
+
+        assert response.status_code == 200
+        assert [task["title"] for task in response.json()] == [
+            "Older deadline",
+            "Newer deadline",
+        ]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_rejects_invalid_sort_by(client, db_session):
+    """Неизвестное поле сортировки должно возвращать 422."""
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        response = client.get(
+            "/api/v1/tasks",
+            params={"sort_by": "title"},
+        )
+
+        assert response.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_list_tasks_rejects_invalid_order(client, db_session):
+    """Неизвестное направление сортировки должно возвращать 422."""
+    user = create_user(db_session)
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        response = client.get(
+            "/api/v1/tasks",
+            params={"order": "sideways"},
+        )
+
+        assert response.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
