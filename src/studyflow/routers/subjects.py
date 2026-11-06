@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from studyflow.database import get_db
 from studyflow.dependencies.auth import get_current_user
+from studyflow.dependencies.csrf import require_csrf
 from studyflow.models.user import User
 from studyflow.schemas.subjects import (
     SubjectCreate,
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/subjects", tags=["Subjects"])
     "/",
     response_model=SubjectResponse,
     status_code=201,
+    dependencies=[Depends(require_csrf)],
 )
 def create_subject(
     data: SubjectCreate,
@@ -74,6 +76,7 @@ def get_subject(
 @router.patch(
     "/{subject_id}",
     response_model=SubjectResponse,
+    dependencies=[Depends(require_csrf)],
 )
 def update_subject(
     subject_id: UUID,
@@ -100,6 +103,7 @@ def update_subject(
 @router.delete(
     "/{subject_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_csrf)],
 )
 def delete_subject(
     subject_id: UUID,

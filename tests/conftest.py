@@ -7,6 +7,7 @@ from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import Session
 
 from studyflow.database import get_db
+from studyflow.dependencies.csrf import require_csrf
 from studyflow.main import app
 from studyflow.settings import settings
 
@@ -63,9 +64,13 @@ def client(db_session: Session) -> Iterator[TestClient]:
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
+    # Most tests are not about CSRF, so the check is switched off by default.
+    # Tests in test_csrf_protection.py switch the real check back on.
+    app.dependency_overrides[require_csrf] = lambda: None
 
     try:
         with TestClient(app) as test_client:
             yield test_client
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(require_csrf, None)

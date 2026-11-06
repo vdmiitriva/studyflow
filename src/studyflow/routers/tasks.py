@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from studyflow.database import get_db
 from studyflow.dependencies.auth import get_current_user
+from studyflow.dependencies.csrf import require_csrf
 from studyflow.models.user import User
 from studyflow.schemas.tasks import TaskCreate, TaskResponse, TaskUpdate
 from studyflow.services.tasks import (
@@ -34,6 +35,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
     "/",
     response_model=TaskResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_csrf)],
 )
 def create_task(
     data: TaskCreate,
@@ -103,7 +105,11 @@ def read_task(
     return task
 
 
-@router.patch("/{task_id}", response_model=TaskResponse)
+@router.patch(
+    "/{task_id}",
+    response_model=TaskResponse,
+    dependencies=[Depends(require_csrf)],
+)
 def edit_task(
     task_id: UUID,
     data: TaskUpdate,
@@ -140,6 +146,7 @@ def edit_task(
 @router.delete(
     "/{task_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_csrf)],
 )
 def remove_task(
     task_id: UUID,
