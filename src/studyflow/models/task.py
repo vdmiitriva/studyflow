@@ -9,6 +9,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -30,6 +31,11 @@ class Task(Base):
         CheckConstraint(
             "estimate_minutes BETWEEN 1 AND 1440",
             name="ck_task_estimate_minutes",
+        ),
+        UniqueConstraint(
+            "id",
+            "user_id",
+            name="uq_task_id_user_id",
         ),
         ForeignKeyConstraint(
             ["subject_id", "user_id"],
