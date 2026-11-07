@@ -49,6 +49,8 @@ def create_task(db: Session, user_id: UUID, data: TaskCreate) -> Task:
         subject_id=data.subject_id,
         deadline=data.deadline,
         status=data.status,
+        priority=data.priority,
+        estimate_minutes=data.estimate_minutes,
     )
 
     db.add(task)
@@ -172,6 +174,9 @@ def update_task(
 
     if "status" in updates and updates["status"] is None:
         raise ValueError("Status cannot be null")
+
+    if "priority" in updates and updates["priority"] is None:
+        raise ValueError("Priority cannot be null")
 
     if "subject_id" in updates:
         validate_subject(

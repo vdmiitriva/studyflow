@@ -12,6 +12,7 @@ def create_subject(db: Session, user_id: UUID, data: SubjectCreate) -> Subject:
     subject: Subject = Subject(
         user_id=user_id,
         name=data.name,
+        color=data.color,
     )
 
     db.add(subject)
@@ -59,6 +60,11 @@ def update_subject(
         if data.name is None:
             raise ValueError("Name cannot be null")
         subject.name = data.name
+
+    if "color" in data.model_fields_set:
+        if data.color is None:
+            raise ValueError("Color cannot be null")
+        subject.color = data.color
 
     try:
         db.commit()

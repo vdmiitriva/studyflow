@@ -84,12 +84,18 @@ def update_subject(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> SubjectResponse:
-    subject = update_subject_service(
-        db=db,
-        user_id=user.id,
-        subject_id=subject_id,
-        data=data,
-    )
+    try:
+        subject = update_subject_service(
+            db=db,
+            user_id=user.id,
+            subject_id=subject_id,
+            data=data,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
 
     if subject is None:
         raise HTTPException(

@@ -23,6 +23,10 @@ class User(Base):
         String(255),
         nullable=True,
     )
+    name: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
     timezone: Mapped[str] = mapped_column(
         String(64),
         nullable=False,

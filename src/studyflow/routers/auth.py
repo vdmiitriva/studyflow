@@ -4,10 +4,20 @@ from sqlalchemy.orm import Session
 
 from studyflow.database import get_db
 from studyflow.dependencies.auth import get_current_user
+from studyflow.dependencies.csrf import require_csrf
 from studyflow.models.user import User
-from studyflow.schemas.auth import LoginRequest, RegisterRequest, UserResponse
+from studyflow.schemas.auth import (
+    LoginRequest,
+    RegisterRequest,
+    UserResponse,
+    UserUpdate,
+)
 from studyflow.security import create_csrf_token, verify_csrf_token
-from studyflow.services.auth import authenticate_user, register_user
+from studyflow.services.auth import (
+    authenticate_user,
+    register_user,
+    update_user,
+)
 from studyflow.services.sessions import (
     create_session,
     get_valid_session,
@@ -16,6 +26,15 @@ from studyflow.services.sessions import (
 from studyflow.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def to_user_response(user: User) -> UserResponse:
+    return UserResponse(
+        id=str(user.id),
+        email=user.email,
+        name=user.name,
+        timezone=user.timezone,
+    )
 
 
 @router.post(
@@ -45,7 +64,7 @@ def register(
             detail="Email is already registered",
         ) from exc
 
-    return UserResponse(id=str(user.id), email=user.email)
+    return to_user_response(user)
 
 
 @router.post(
@@ -86,17 +105,29 @@ def login(
         max_age=30 * 24 * 60 * 60,
     )
 
-    return UserResponse(id=str(user.id), email=user.email)
+    return to_user_response(user)
 
 
 @router.get("/me", response_model=UserResponse)
 def read_current_user(
     user: User = Depends(get_current_user),
 ) -> UserResponse:
-    return UserResponse(
-        id=str(user.id),
-        email=user.email,
-    )
+    return to_user_response(user)
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    dependencies=[Depends(require_csrf)],
+)
+def update_current_user(
+    data: UserUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> UserResponse:
+    user = update_user(db, user, data)
+
+    return to_user_response(user)
 
 
 @router.get("/csrf")

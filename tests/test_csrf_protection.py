@@ -19,6 +19,7 @@ MUTATING_REQUESTS = [
     ("post", SUBJECT_URL, {"name": "Subject"}),
     ("patch", f"{SUBJECT_URL}{uuid4()}", {"name": "New"}),
     ("delete", f"{SUBJECT_URL}{uuid4()}", None),
+    ("patch", "/api/v1/auth/me", {"timezone": "Europe/Moscow"}),
 ]
 
 

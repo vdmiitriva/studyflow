@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from studyflow.models.user import User
-from studyflow.schemas.auth import RegisterRequest
+from studyflow.schemas.auth import RegisterRequest, UserUpdate
 from studyflow.security import hash_password, verify_password
 
 
@@ -41,5 +41,19 @@ def authenticate_user(
 
     if not verify_password(password, user.password_hash):
         return None
+
+    return user
+
+
+def update_user(db: Session, user: User, data: UserUpdate) -> User:
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+
+    try:
+        db.commit()
+        db.refresh(user)
+    except Exception:
+        db.rollback()
+        raise
 
     return user

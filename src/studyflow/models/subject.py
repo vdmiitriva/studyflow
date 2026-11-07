@@ -13,6 +13,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from studyflow.models.base import Base
 
+DEFAULT_SUBJECT_COLOR = "#4F46E5"
+
 
 class Subject(Base):
     __tablename__ = "subjects"
@@ -20,6 +22,10 @@ class Subject(Base):
         CheckConstraint(
             "status IN ('active', 'archived')",
             name="ck_subject_status",
+        ),
+        CheckConstraint(
+            "color ~ '^#[0-9A-Fa-f]{6}$'",
+            name="ck_subject_color",
         ),
         UniqueConstraint(
             "id",
@@ -45,6 +51,12 @@ class Subject(Base):
         String(20),
         default="active",
         server_default="active",
+        nullable=False,
+    )
+    color: Mapped[str] = mapped_column(
+        String(7),
+        default=DEFAULT_SUBJECT_COLOR,
+        server_default=DEFAULT_SUBJECT_COLOR,
         nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(

@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Integer,
     String,
     Text,
     func,
@@ -21,6 +22,14 @@ class Task(Base):
         CheckConstraint(
             "status IN ('todo', 'in_progress', 'completed')",
             name="ck_task_status",
+        ),
+        CheckConstraint(
+            "priority IN ('low', 'medium', 'high')",
+            name="ck_task_priority",
+        ),
+        CheckConstraint(
+            "estimate_minutes BETWEEN 1 AND 1440",
+            name="ck_task_estimate_minutes",
         ),
         ForeignKeyConstraint(
             ["subject_id", "user_id"],
@@ -57,6 +66,16 @@ class Task(Base):
         default="todo",
         server_default="todo",
         nullable=False,
+    )
+    priority: Mapped[str] = mapped_column(
+        String(10),
+        default="medium",
+        server_default="medium",
+        nullable=False,
+    )
+    estimate_minutes: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

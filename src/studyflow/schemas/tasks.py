@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 TaskStatus = Literal["todo", "in_progress", "completed"]
+TaskPriority = Literal["low", "medium", "high"]
 
 
 class TaskCreate(BaseModel):
@@ -13,6 +14,8 @@ class TaskCreate(BaseModel):
     subject_id: uuid.UUID | None = None
     deadline: AwareDatetime | None = None
     status: TaskStatus = "todo"
+    priority: TaskPriority = "medium"
+    estimate_minutes: int | None = Field(default=None, ge=1, le=1440)
 
 
 class TaskResponse(BaseModel):
@@ -25,6 +28,8 @@ class TaskResponse(BaseModel):
     description: str | None
     deadline: datetime | None
     status: TaskStatus
+    priority: TaskPriority
+    estimate_minutes: int | None
     created_at: datetime
 
 
@@ -38,3 +43,5 @@ class TaskUpdate(BaseModel):
     subject_id: uuid.UUID | None = None
     deadline: AwareDatetime | None = None
     status: TaskStatus | None = None
+    priority: TaskPriority | None = None
+    estimate_minutes: int | None = Field(default=None, ge=1, le=1440)
