@@ -11,6 +11,12 @@ from studyflow.settings import settings
 
 TASK_URL = "/api/v1/tasks/"
 SUBJECT_URL = "/api/v1/subjects/"
+BLOCK_URL = "/api/v1/blocks/"
+BLOCK_BODY = {
+    "title": "Block",
+    "starts_at": "2026-11-10T09:00:00Z",
+    "ends_at": "2026-11-10T10:00:00Z",
+}
 
 MUTATING_REQUESTS = [
     ("post", TASK_URL, {"title": "Task"}),
@@ -20,6 +26,9 @@ MUTATING_REQUESTS = [
     ("patch", f"{SUBJECT_URL}{uuid4()}", {"name": "New"}),
     ("delete", f"{SUBJECT_URL}{uuid4()}", None),
     ("patch", "/api/v1/auth/me", {"timezone": "Europe/Moscow"}),
+    ("post", BLOCK_URL, BLOCK_BODY),
+    ("patch", f"{BLOCK_URL}{uuid4()}", {"title": "New"}),
+    ("delete", f"{BLOCK_URL}{uuid4()}", None),
 ]
 
 
