@@ -17,6 +17,7 @@ __all__ = [
     "BlockConflictError",
     "SubjectNotFoundError",
     "TaskNotFoundError",
+    "check_period",
     "create_block",
     "delete_block",
     "find_conflicts",
@@ -49,6 +50,15 @@ def overlaps(first_start: Any, first_end: Any, second_start: Any, second_end: An
     to find conflicts, so it is written only once.
     """
     return and_(first_start < second_end, first_end > second_start)
+
+
+def check_period(period_start: datetime, period_end: datetime) -> None:
+    """A calendar period must be positive and not longer than 62 days."""
+    if period_end <= period_start:
+        raise ValueError("Period must end after it starts")
+
+    if period_end - period_start > MAX_PERIOD:
+        raise ValueError("Period cannot be longer than 62 days")
 
 
 def get_task_of_user(db: Session, user_id: UUID, task_id: UUID) -> Task:
@@ -235,11 +245,7 @@ def list_blocks(
     A block that began before the period but is still going on inside it
     belongs to the period too, so both ends of the block are compared.
     """
-    if period_end <= period_start:
-        raise ValueError("Period must end after it starts")
-
-    if period_end - period_start > MAX_PERIOD:
-        raise ValueError("Period cannot be longer than 62 days")
+    check_period(period_start, period_end)
 
     query = (
         select(TimeBlock)

@@ -46,7 +46,17 @@ def authenticate_user(
 
 
 def update_user(db: Session, user: User, data: UserUpdate) -> User:
-    for field, value in data.model_dump(exclude_unset=True).items():
+    changes = data.model_dump(exclude_unset=True)
+
+    # A field that was not sent keeps its saved value, so the day is checked
+    # as a whole: the new value together with the one stored in the profile.
+    day_start = changes.get("day_start", user.day_start)
+    day_end = changes.get("day_end", user.day_end)
+
+    if day_start >= day_end:
+        raise ValueError("Day must end after it starts")
+
+    for field, value in changes.items():
         setattr(user, field, value)
 
     try:

@@ -34,6 +34,8 @@ def to_user_response(user: User) -> UserResponse:
         email=user.email,
         name=user.name,
         timezone=user.timezone,
+        day_start=user.day_start,
+        day_end=user.day_end,
     )
 
 
@@ -125,7 +127,13 @@ def update_current_user(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> UserResponse:
-    user = update_user(db, user, data)
+    try:
+        user = update_user(db, user, data)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
 
     return to_user_response(user)
 
