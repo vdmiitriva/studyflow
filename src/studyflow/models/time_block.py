@@ -57,6 +57,7 @@ class TimeBlock(Base):
     )
     task_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
     subject_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
+    series_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
     title: Mapped[str] = mapped_column(
         String(200),
         nullable=False,

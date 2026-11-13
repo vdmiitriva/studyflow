@@ -97,6 +97,7 @@ class BlockResponse(BaseModel):
     user_id: uuid.UUID
     task_id: uuid.UUID | None
     subject_id: uuid.UUID | None
+    series_id: uuid.UUID | None
     title: str
     starts_at: datetime
     ends_at: datetime

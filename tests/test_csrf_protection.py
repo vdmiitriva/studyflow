@@ -17,6 +17,14 @@ BLOCK_BODY = {
     "starts_at": "2026-11-10T09:00:00Z",
     "ends_at": "2026-11-10T10:00:00Z",
 }
+SERIES_BODY = {
+    "title": "English",
+    "first_date": "2026-11-10",
+    "last_date": "2026-11-12",
+    "start_time": "09:00",
+    "duration_minutes": 60,
+    "repeat": "daily",
+}
 
 MUTATING_REQUESTS = [
     ("post", TASK_URL, {"title": "Task"}),
@@ -29,6 +37,8 @@ MUTATING_REQUESTS = [
     ("post", BLOCK_URL, BLOCK_BODY),
     ("patch", f"{BLOCK_URL}{uuid4()}", {"title": "New"}),
     ("delete", f"{BLOCK_URL}{uuid4()}", None),
+    ("post", f"{BLOCK_URL}series", SERIES_BODY),
+    ("post", f"{BLOCK_URL}series/preview", SERIES_BODY),
 ]
 
 
