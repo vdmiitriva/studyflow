@@ -69,3 +69,28 @@ class SeriesConflictResponse(BaseModel):
     message: str
     total_conflicting_blocks: int
     blocks: list[SeriesPreviewBlock]
+
+
+class FollowingUpdate(BaseModel):
+    """New time of day and/or duration for a block and the ones after it.
+
+    Only these two can change, so every block stays on its own date.
+    """
+
+    start_time: HourMinute | None = None
+    duration_minutes: int | None = Field(default=None, ge=1, le=1440)
+
+    @model_validator(mode="after")
+    def check_changes(self):
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+
+        for field in self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+
+        return self
+
+
+class FollowingDeleteResponse(BaseModel):
+    deleted_blocks: int

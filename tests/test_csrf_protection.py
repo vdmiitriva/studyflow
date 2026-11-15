@@ -39,6 +39,8 @@ MUTATING_REQUESTS = [
     ("delete", f"{BLOCK_URL}{uuid4()}", None),
     ("post", f"{BLOCK_URL}series", SERIES_BODY),
     ("post", f"{BLOCK_URL}series/preview", SERIES_BODY),
+    ("patch", f"{BLOCK_URL}{uuid4()}/following", {"start_time": "12:00"}),
+    ("delete", f"{BLOCK_URL}{uuid4()}/following", None),
 ]
 
 
