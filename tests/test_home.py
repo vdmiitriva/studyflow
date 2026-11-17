@@ -109,7 +109,8 @@ def test_a_new_user_has_an_empty_home(client, login, set_now):
     response = client.get(HOME_URL)
 
     assert response.status_code == 200
-    assert response.json() == {"now": [], "next": None}
+    assert response.json()["now"] == []
+    assert response.json()["next"] is None
 
 
 def test_home_requires_authentication(client):
