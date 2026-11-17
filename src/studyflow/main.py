@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from studyflow.routers.auth import router as auth_router
 from studyflow.routers.calendar import router as calendar_router
+from studyflow.routers.home import router as home_router
 from studyflow.routers.series import router as series_router
 from studyflow.routers.subjects import router as subjects_router
 from studyflow.routers.tasks import router as tasks_router
@@ -14,6 +15,7 @@ app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(series_router, prefix="/api/v1")
 app.include_router(time_blocks_router, prefix="/api/v1")
 app.include_router(calendar_router, prefix="/api/v1")
+app.include_router(home_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/health")
