@@ -1,20 +1,22 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import Select, and_, case, func, select
+from sqlalchemy import Select, and_, case, func, or_, select
 from sqlalchemy.orm import Session
 
 from studyflow.models.subject import Subject
 from studyflow.models.task import Task
 from studyflow.models.time_block import TimeBlock
+from studyflow.services.calendar import Period, get_free_windows
 
 BlockWithSubject = tuple[TimeBlock, Subject | None]
 TaskWithSubject = tuple[Task, Subject | None]
 
 SUGGESTIONS_SHOWN = 3
 DEADLINES_SHOWN = 5
+FREE_WINDOWS_SHOWN = 3
 
 # High priority first, then medium, then low.
 PRIORITY_RANK = case(
@@ -235,3 +237,118 @@ def reason_of(
         return "no_deadline"
 
     return None
+
+
+@dataclass
+class WeekStats:
+    total: int
+    completed: int
+    overdue: int
+    in_progress: int
+    todo: int
+    percent: int
+
+
+def week_bounds(now: datetime, zone: ZoneInfo) -> tuple[datetime, datetime]:
+    """The week of `now` in the user's calendar: Monday 00:00 up to the next
+    Monday 00:00 (not included)."""
+    today = now.astimezone(zone).date()
+    monday = today - timedelta(days=today.weekday())
+
+    return (
+        datetime.combine(monday, time.min, tzinfo=zone),
+        datetime.combine(monday + timedelta(days=7), time.min, tzinfo=zone),
+    )
+
+
+def percent_of(completed: int, total: int) -> int:
+    """A whole percent, rounded to the nearest (halves go up). 0 if empty."""
+    if total == 0:
+        return 0
+
+    return (completed * 100 + total // 2) // total
+
+
+def get_week_stats(
+    db: Session,
+    user_id: UUID,
+    now: datetime,
+    zone: ZoneInfo,
+) -> WeekStats:
+    """How the tasks of this week are going.
+
+    Counted: tasks whose deadline is in the current week (any status) and
+    unfinished tasks with an earlier deadline (old debts). Finished tasks of
+    earlier weeks and tasks without a deadline are not counted.
+
+    The four groups never overlap: completed; overdue (unfinished, the moment
+    has passed, even if it is still in progress); in progress; to do.
+    """
+    week_start, next_week_start = week_bounds(now, zone)
+    in_this_week = and_(Task.deadline >= week_start, Task.deadline < next_week_start)
+    old_debt = and_(Task.deadline < week_start, Task.status != "completed")
+
+    row = db.execute(
+        select(
+            func.count(Task.id).filter(Task.status == "completed"),
+            func.count(Task.id).filter(
+                and_(Task.status != "completed", Task.deadline < now)
+            ),
+            func.count(Task.id).filter(
+                and_(Task.status == "in_progress", Task.deadline >= now)
+            ),
+            func.count(Task.id).filter(
+                and_(Task.status == "todo", Task.deadline >= now)
+            ),
+        ).where(
+            Task.user_id == user_id,
+            Task.deadline.is_not(None),
+            or_(in_this_week, old_debt),
+        )
+    ).one()
+
+    completed, overdue, in_progress, todo = row
+    total = completed + overdue + in_progress + todo
+
+    return WeekStats(
+        total=total,
+        completed=completed,
+        overdue=overdue,
+        in_progress=in_progress,
+        todo=todo,
+        percent=percent_of(completed, total),
+    )
+
+
+def get_free_today(
+    db: Session,
+    user_id: UUID,
+    timezone: str,
+    day_start: time,
+    day_end: time,
+    now: datetime,
+) -> list[Period]:
+    """The nearest free windows from now until the end of the user's day.
+
+    The existing free-time calculation is used for the period from now until
+    local midnight, so the profile hours cut the windows: nothing is offered
+    before the day starts or after it ends. There is no minimum length except
+    that a window must last at least a minute.
+    """
+    zone = ZoneInfo(timezone)
+    midnight = datetime.combine(
+        now.astimezone(zone).date() + timedelta(days=1),
+        time.min,
+        tzinfo=zone,
+    )
+    windows = get_free_windows(
+        db,
+        user_id,
+        timezone,
+        now,
+        midnight,
+        day_start,
+        day_end,
+        min_minutes=1,
+    )
+    return windows[:FREE_WINDOWS_SHOWN]

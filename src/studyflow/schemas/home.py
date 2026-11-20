@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from studyflow.schemas.calendar import FreeWindow
 from studyflow.schemas.tasks import TaskPriority, TaskStatus
 
 Urgency = Literal["overdue", "today", "soon", "later"]
@@ -55,9 +56,20 @@ class HomeDeadlines(BaseModel):
     tasks: list[HomeTask]
 
 
+class HomeWeek(BaseModel):
+    total: int
+    completed: int
+    overdue: int
+    in_progress: int
+    todo: int
+    percent: int
+
+
 class HomeResponse(BaseModel):
     now: list[HomeBlock]
     next: HomeBlock | None
     current_task: HomeTask | None
     suggested: list[SuggestedTask]
     deadlines: HomeDeadlines
+    week: HomeWeek
+    free_today: list[FreeWindow]

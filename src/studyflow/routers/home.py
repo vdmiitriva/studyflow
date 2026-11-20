@@ -1,4 +1,5 @@
-from datetime import datetime
+from dataclasses import asdict
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
@@ -8,12 +9,14 @@ from studyflow.database import get_db
 from studyflow.dependencies.auth import get_current_user
 from studyflow.dependencies.clock import get_now
 from studyflow.models.user import User
+from studyflow.schemas.calendar import FreeWindow
 from studyflow.schemas.home import (
     HomeBlock,
     HomeDeadlines,
     HomeResponse,
     HomeSubject,
     HomeTask,
+    HomeWeek,
     SuggestedTask,
 )
 from studyflow.services import home as home_service
@@ -66,6 +69,18 @@ def to_suggested_task(
     return SuggestedTask(**data, reason=reason)
 
 
+def to_free_window(start: datetime, end: datetime) -> FreeWindow:
+    # The length is taken in UTC: two moments with the same time zone object
+    # are subtracted by the wall clock, which ignores a clock change.
+    elapsed = end.astimezone(UTC) - start.astimezone(UTC)
+
+    return FreeWindow(
+        starts_at=start,
+        ends_at=end,
+        minutes=int(elapsed.total_seconds() // 60),
+    )
+
+
 @router.get("", response_model=HomeResponse)
 def read_home(
     now: datetime = Depends(get_now),
@@ -81,6 +96,15 @@ def read_home(
         exclude_task_id=current_task[0].id if current_task else None,
     )
     deadlines = home_service.get_deadlines(db, user.id, now)
+    week = home_service.get_week_stats(db, user.id, now, zone)
+    free_today = home_service.get_free_today(
+        db,
+        user.id,
+        user.timezone,
+        user.day_start,
+        user.day_end,
+        now,
+    )
 
     return HomeResponse(
         now=[
@@ -97,4 +121,6 @@ def read_home(
             upcoming_total=deadlines.upcoming_total,
             tasks=[to_home_task(item, now, zone) for item in deadlines.tasks],
         ),
+        week=HomeWeek(**asdict(week)),
+        free_today=[to_free_window(start, end) for start, end in free_today],
     )
